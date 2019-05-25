@@ -30,7 +30,7 @@
             android:layout_marginTop="10dp"
             android:hint="@string/email_hint"
             android:maxLines="1"
-            android:inputType="textVisiblePassword|textEmailAddress"
+            android:inputType="textVisiblePassword"
             android:theme="@style/RegisterEtTheme"
             android:maxLength="80"
             android:textColor="@color/colorPrimary" />

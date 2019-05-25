@@ -30,7 +30,8 @@
             android:hint="@string/email_hint"
             android:maxLength="80"
             android:maxLines="1"
-            android:inputType="textVisiblePassword|textEmailAddress"
+            android:text="nike19942009@hotmail.com"
+            android:inputType="textVisiblePassword"
             android:theme="@style/LoginEtTheme"
             android:textColor="@color/colorPrimaryDark" />
 
@@ -48,6 +49,7 @@
                 android:digits="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
                 android:hint="@string/password_hint"
                 android:inputType="textPassword"
+                android:text="password"
                 android:maxLines="1"
                 android:maxLength="30"
                 android:textColor="@color/colorPrimaryDark" />

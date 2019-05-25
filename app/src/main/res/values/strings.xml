@@ -22,4 +22,11 @@
     <string name="test_button">Prueba la app</string>
     <string name="reg_button">Regístrate</string>
 
+    <!-- Authentication -->
+    <string name="base_url">https://oaxacaos-api.herokuapp.com/api/</string>
+    <string name="sign_up_url">auth/user/sign-up</string>
+    <string name="login_url">auth/user/sign-in</string>
+    <string name="get_reports_url">reports/nearby?</string>
+    <string name="create_report_url">reports/</string>
+
 </resources>
