@@ -9,8 +9,11 @@ public class Reports {
 
     private double latitude, longitude;
     private JSONArray likes;
-    private int reportType, status;
+    private int reportType;
+    private int status;
+    private String report_id;
     private String address, userId, CreatedAt, UpdatedAt;
+    String [] report_types = {"Semáforo", "Accidente", "Bloqueo", "Obstrucción"};
 
     public void setLatitude(double latitude) {
         this.latitude = latitude;
@@ -39,6 +42,9 @@ public class Reports {
     public void setUpdatedAt(String updatedAt) {
         UpdatedAt = updatedAt;
     }
+    public void setReport_id(String report_id) {
+        this.report_id = report_id;
+    }
 
     public double getLatitude() {
         return latitude;
@@ -48,9 +54,6 @@ public class Reports {
     }
     public JSONArray getLikes() {
         return likes;
-    }
-    public int getReportType() {
-        return reportType;
     }
     public String getAddress() {
         return address;
@@ -63,5 +66,16 @@ public class Reports {
     }
     public String getUpdatedAt() {
         return UpdatedAt;
+    }
+    public String getReport_id() {
+        return report_id;
+    }
+    public String getReportType() {
+        if (reportType < 4) {
+            return report_types[reportType];
+        }
+        else {
+            return "Desconocido";
+        }
     }
 }

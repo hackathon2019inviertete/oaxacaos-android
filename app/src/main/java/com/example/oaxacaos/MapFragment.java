@@ -31,6 +31,7 @@ import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.oaxacaos.Api.GetLikesMethod;
 import com.example.oaxacaos.Api.GetMethod;
 import com.example.oaxacaos.Api.PostMethod;
 import com.example.oaxacaos.Models.Reports;
@@ -65,6 +66,7 @@ public class MapFragment extends Fragment {
     ArrayList<Reports> al_reports;
     LatLng currentLatLng;
     boolean isMapReady = false;
+    Reports selectedReport;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -253,7 +255,14 @@ public class MapFragment extends Fragment {
                 googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
                     @Override
                     public boolean onMarkerClick(Marker marker) {
-                        popupDetAddress.setText("probable direccion");
+                        String tag = (String) marker.getTag();
+                        for (Reports reports : al_reports) {
+                            if (reports.getReport_id().equals(tag)) {
+                                selectedReport = reports;
+                                popupDetAddress.setText(reports.getReportType() + ": " + reports.getAddress() + "\nLikes: " + reports.getLikes().length());
+                            }
+                        }
+
                         popupDetWindow.setAnimationStyle(R.style.popup_window_animation);
                         popupDetWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
                         popupDetWindow.setFocusable(true);
@@ -267,6 +276,10 @@ public class MapFragment extends Fragment {
                         popupLikeBtn.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
+                                if (selectedReport != null){
+                                    uploadLike(selectedReport.getReport_id());
+                                    getReports();
+                                }
                                 popupDetWindow.dismiss();
                             }
                         });
@@ -380,6 +393,7 @@ public class MapFragment extends Fragment {
                             reports.setUserId(report.getString("user_id"));
                             reports.setCreatedAt(report.getString("created_at"));
                             reports.setUpdatedAt(report.getString("updated_at"));
+                            reports.setReport_id(report.getString("_id"));
 
                             al_reports.add(reports);
                         }
@@ -408,10 +422,22 @@ public class MapFragment extends Fragment {
     public void reloadMap() {
         for (Reports report : al_reports) { // TODO porque itera menos ciclos
             Log.i("TestApp", report.getLatitude() + " " + report.getLongitude());
-            googleMap.addMarker(new MarkerOptions()
+            Marker marker = googleMap.addMarker(new MarkerOptions()
                     .position(new LatLng(report.getLatitude(), report.getLongitude()))
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+            marker.setTag(report.getReport_id());
         }
+    }
+
+    public void uploadLike(final String report_id) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                GetLikesMethod getMethod = new GetLikesMethod();
+                JSONArray jsonLikes = getMethod.makeRequest(getString(R.string.create_report_url) + report_id + getString(R.string.update_likes_url), getContext(), true);
+                Log.i("TestApp", jsonLikes.toString());
+            }
+        }).start();
     }
 
     @Override
