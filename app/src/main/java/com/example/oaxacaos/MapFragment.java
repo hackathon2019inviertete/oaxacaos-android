@@ -1,6 +1,7 @@
 package com.example.oaxacaos;
 
 import android.Manifest;
+import android.animation.Animator;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
@@ -8,11 +9,14 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.example.oaxacaos.Models.UXMethods;
@@ -28,6 +32,10 @@ public class MapFragment extends Fragment {
 
     MapView mMapView;
     private GoogleMap googleMap;
+    boolean isFABOpen = false;
+    View fabBGLayout;
+    FloatingActionButton optionsFab, reportFab, corruptionFab;
+    LinearLayout reportLl, corruptionLl;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -52,6 +60,13 @@ public class MapFragment extends Fragment {
         final View rootView = inflater.inflate(R.layout.fragment_map, container, false);
         mMapView = rootView.findViewById(R.id.mapView);
         mMapView.onCreate(savedInstanceState);
+
+        fabBGLayout = rootView.findViewById(R.id.fabBGLayout);
+        optionsFab = rootView.findViewById(R.id.options_fab);
+        reportLl = rootView.findViewById(R.id.report_ll);
+        corruptionLl = rootView.findViewById(R.id.corruption_ll);
+        reportFab = rootView.findViewById(R.id.report_fab);
+        corruptionFab = rootView.findViewById(R.id.corruption_fab);
 
         try {
             MapsInitializer.initialize(getActivity().getApplicationContext());
@@ -84,12 +99,84 @@ public class MapFragment extends Fragment {
                 }
                 googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
 
-                // float buttons
+                // float buttons animations
+                optionsFab.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (!isFABOpen) {
+                            showFABMenu();
+                        } else {
+                            closeFABMenu();
+                        }
+                    }
+                });
+                fabBGLayout.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (isFABOpen) {
+                            closeFABMenu();
+                        }
+                    }
+                });
 
+                reportFab.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        
+                    }
+                });
+
+                corruptionFab.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+
+                    }
+                });
             }
         });
 
         return rootView;
+    }
+
+    public void showFABMenu(){
+        isFABOpen=true;
+        reportLl.setVisibility(View.VISIBLE);
+        corruptionLl.setVisibility(View.VISIBLE);
+        fabBGLayout.setVisibility(View.VISIBLE);
+        optionsFab.animate().rotationBy(180);
+        reportLl.animate().translationY(-188);
+        corruptionLl.animate().translationY(-386);
+    }
+
+    public void closeFABMenu(){
+        isFABOpen=false;
+        fabBGLayout.setVisibility(View.GONE);
+        optionsFab.animate().rotationBy(-180);
+        reportLl.animate().translationY(0);
+        corruptionLl.animate().translationY(0).setListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animator) {
+                if(!isFABOpen){
+                    reportLl.setVisibility(View.GONE);
+                    corruptionLl.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animator) {
+
+            }
+        });
     }
 
     @Override
