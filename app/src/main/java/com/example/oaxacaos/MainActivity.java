@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                         break;
                     case R.id.navigation_reports:
-                        if(!(currentFragment instanceof MapFragment)) {
+                        if(!(currentFragment instanceof ReportFragment)) {
                             fragmentManager.popBackStack(BACK_STACK_ROOT_TAG, 0);
                         }
                         break;
@@ -78,7 +78,6 @@ public class MainActivity extends AppCompatActivity {
                     .setPositiveButton(getString(R.string.logout_accept), new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            UserData.getInstance().cleanInstance();
                             Intent intent = new Intent(getApplicationContext(), LoginOptionsActivity.class);
                             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                             startActivity(intent);

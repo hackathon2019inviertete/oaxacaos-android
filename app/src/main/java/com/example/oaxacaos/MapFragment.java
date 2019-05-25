@@ -12,11 +12,15 @@ import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
+import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
@@ -36,6 +40,7 @@ import com.example.oaxacaos.Api.GetMethod;
 import com.example.oaxacaos.Api.PostMethod;
 import com.example.oaxacaos.Models.Reports;
 import com.example.oaxacaos.Models.UXMethods;
+import com.example.oaxacaos.Models.UserData;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -50,9 +55,16 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
+
+import static android.Manifest.permission.RECORD_AUDIO;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
 public class MapFragment extends Fragment {
 
@@ -68,20 +80,44 @@ public class MapFragment extends Fragment {
     boolean isMapReady = false;
     Reports selectedReport;
 
+    String AudioSavePathInDevice = null;
+    MediaRecorder mediaRecorder;
+    Random random;
+    String RandomAudioFileName = "ABCDEFGHIJKLMNOP";
+    MediaPlayer mediaPlayer;
+    boolean isRecording = false;
+
+    private static final int REQUEST_RECORDING = 10;
+    private static final int REQUEST_MAP = 20;
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         // Comprobar que los permisos sean concedidos y que sean de ACCES_FINE_LOCATION
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                googleMap.setMyLocationEnabled(true);
+        if (requestCode == REQUEST_MAP) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    googleMap.setMyLocationEnabled(true);
+                } else {
+                    UXMethods.showToast(getContext(), getString(R.string.permissions_req), Toast.LENGTH_LONG);
+                }
             } else {
                 UXMethods.showToast(getContext(), getString(R.string.permissions_req), Toast.LENGTH_LONG);
             }
-        } else {
-            UXMethods.showToast(getContext(), getString(R.string.permissions_req), Toast.LENGTH_LONG);
+        } else if (requestCode == REQUEST_RECORDING) {
+            if (grantResults.length> 0) {
+                boolean StoragePermission = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                boolean RecordPermission = grantResults[1] == PackageManager.PERMISSION_GRANTED;
+
+                if (StoragePermission && RecordPermission) {
+                    startRecording();
+                } else {
+                    UXMethods.showToast(getContext(), getString(R.string.permissions_req), Toast.LENGTH_LONG);
+                }
+            }
         }
+
     }
 
     @Override
@@ -154,7 +190,7 @@ public class MapFragment extends Fragment {
 
                 // Solicitar permisos
                 if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_MAP);
                 } else {
                     googleMap.setMyLocationEnabled(true);
                 }
@@ -248,7 +284,21 @@ public class MapFragment extends Fragment {
                 corruptionFab.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-
+                        // TODO: FINAL
+                        if(checkPermission()) {
+                            if (!isRecording) {
+                                startRecording();
+                                isRecording = true;
+                                Log.i("TestApp", "voa graba");
+                            } else {
+                                mediaRecorder.stop();
+                                isRecording = false;
+                                Log.i("TestApp", "ia we");
+                                Toast.makeText(getContext(), "detenido...", Toast.LENGTH_SHORT).show();
+                            }
+                        } else {
+                            requestPermission();
+                        }
                     }
                 });
 
@@ -438,6 +488,38 @@ public class MapFragment extends Fragment {
                 Log.i("TestApp", jsonLikes.toString());
             }
         }).start();
+    }
+
+    public boolean checkPermission() {
+        int result = ContextCompat.checkSelfPermission(getContext(), WRITE_EXTERNAL_STORAGE);
+        int result1 = ContextCompat.checkSelfPermission(getContext(), RECORD_AUDIO);
+        return result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestPermission() {
+        ActivityCompat.requestPermissions(getActivity(), new String[]{WRITE_EXTERNAL_STORAGE, RECORD_AUDIO}, REQUEST_RECORDING);
+    }
+
+    public void startRecording() {
+        Calendar cal = Calendar.getInstance();
+        String timeName = cal.getTime().toString();
+
+        AudioSavePathInDevice = Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + timeName + "AudioRecording.3gp";
+        UserData.getInstance().files.add(AudioSavePathInDevice);
+
+        mediaRecorder = new MediaRecorder();
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        mediaRecorder.setAudioEncoder(MediaRecorder.OutputFormat.AMR_NB);
+        mediaRecorder.setOutputFile(AudioSavePathInDevice);
+
+        try {
+            mediaRecorder.prepare();
+            mediaRecorder.start();
+            Toast.makeText(getContext(), "grabando...", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
