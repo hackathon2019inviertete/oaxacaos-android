@@ -83,6 +83,9 @@ public class MapFragment extends Fragment {
                     cameraPosition = new CameraPosition.Builder().target(new LatLng(17.0436248,-96.7119411)).zoom(13).build();
                 }
                 googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+
+                // float buttons
+
             }
         });
 

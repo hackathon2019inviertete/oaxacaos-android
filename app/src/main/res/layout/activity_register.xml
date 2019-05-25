@@ -21,7 +21,9 @@
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:srcCompat="@drawable/login_options_logo" />
+            android:adjustViewBounds="true"
+            android:padding="20dp"
+            app:srcCompat="@drawable/app_logo_white" />
 
         <EditText
             android:id="@+id/reg_email_et"

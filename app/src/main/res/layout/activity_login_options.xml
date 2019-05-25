@@ -20,7 +20,9 @@
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:srcCompat="@drawable/register_logo" />
+            android:adjustViewBounds="true"
+            android:padding="20dp"
+            app:srcCompat="@drawable/app_logo" />
 
         <EditText
             android:id="@+id/login_email_et"
