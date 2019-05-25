@@ -6,50 +6,31 @@ import android.util.Log;
 
 import com.example.oaxacaos.R;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 
-public class PostMethod {
+public class GetMethod {
 
     HttpURLConnection client;
 
-    public JSONObject makeRequest(String route, JSONObject jsonParam, Context context, boolean authenticate) {
+    public JSONArray makeRequest(String route, JSONObject jsonParam, Context context, boolean authenticate) {
 
         String baseURL = context.getResources().getString(R.string.base_url);
-        JSONObject json = null;
+        JSONArray json = null;
         try {
-            URL url = new URL(baseURL + route);
+            URL url = new URL(baseURL + route
+                    + "latitude=" + jsonParam.getDouble("latitude")
+                    + "&longitude=" + jsonParam.getDouble("longitude"));
             String token = context.getSharedPreferences("Auth", 0).getString("token", null);
             client = (HttpURLConnection) url.openConnection();
-            client.setDoOutput(true);
-            client.setDoInput(true);
-            client.setRequestMethod("POST");
-            client.setRequestProperty("Content-Type", "application/json");
             if (token != null && authenticate) {
                 client.setRequestProperty("X-Auth-Token", token);
-            }
-            client.setInstanceFollowRedirects(false);
-            client.setUseCaches(false);
-
-            DataOutputStream outputPost = new DataOutputStream(client.getOutputStream());
-            byte[] bytes = jsonParam.toString().getBytes("UTF-8");
-            outputPost.write(bytes);
-            outputPost.flush();
-            outputPost.close();
-
-            if (client.getHeaderField("X-Auth-Token") != null) {
-                Log.i("HEADER", client.getHeaderField("X-Auth-Token"));
-                SharedPreferences sharedPreferences = context.getSharedPreferences("Auth", 0);
-                SharedPreferences.Editor editor = sharedPreferences.edit();
-                editor.putString("token", client.getHeaderField("X-Auth-Token"));
-                editor.commit();
             }
 
             if (client.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -62,7 +43,7 @@ public class PostMethod {
                 }
                 in.close();
 
-                json = new JSONObject(response.toString());
+                json = new JSONArray(response.toString());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -72,4 +53,5 @@ public class PostMethod {
         }
         return json;
     }
+
 }

@@ -51,6 +51,9 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@drawable/main_menu_fab_tv_background"
+            android:paddingLeft="5dp"
+            android:paddingRight="5dp"
             android:text="Levantar reporte" />
 
         <android.support.design.widget.FloatingActionButton
@@ -75,6 +78,9 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:paddingLeft="5dp"
+            android:paddingRight="5dp"
+            android:background="@drawable/main_menu_fab_tv_background"
             android:text="Denunciar abuso"/>
 
         <android.support.design.widget.FloatingActionButton

@@ -27,6 +27,6 @@
     <string name="sign_up_url">auth/user/sign-up</string>
     <string name="login_url">auth/user/sign-in</string>
     <string name="get_reports_url">reports/nearby?</string>
-    <string name="create_report_url">reports/</string>
+    <string name="create_report_url">reports</string>
 
 </resources>

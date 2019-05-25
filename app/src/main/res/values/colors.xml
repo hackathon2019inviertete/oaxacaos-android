@@ -6,5 +6,6 @@
     <color name="colorPrimary">#EE964B</color>
     <color name="colorSecondPrimary">#F95738</color>
     <color name="colorWhite">#FFFFFF</color>
+    <color name="colorTransWhite">#66FFFFFF</color>
     <color name="colorTransBg">#44000000</color>
 </resources>

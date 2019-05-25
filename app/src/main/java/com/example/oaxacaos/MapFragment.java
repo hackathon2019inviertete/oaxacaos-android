@@ -4,7 +4,12 @@ import android.Manifest;
 import android.animation.Animator;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Point;
+import android.graphics.drawable.ColorDrawable;
+import android.location.Address;
 import android.location.Criteria;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -13,20 +18,40 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.util.Log;
+import android.view.Display;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.NumberPicker;
+import android.widget.PopupWindow;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.oaxacaos.Api.GetMethod;
+import com.example.oaxacaos.Api.PostMethod;
+import com.example.oaxacaos.Models.Reports;
 import com.example.oaxacaos.Models.UXMethods;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 public class MapFragment extends Fragment {
 
@@ -36,6 +61,10 @@ public class MapFragment extends Fragment {
     View fabBGLayout;
     FloatingActionButton optionsFab, reportFab, corruptionFab;
     LinearLayout reportLl, corruptionLl;
+    ViewGroup root;
+    ArrayList<Reports> al_reports;
+    LatLng currentLatLng;
+    boolean isMapReady = false;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -68,6 +97,48 @@ public class MapFragment extends Fragment {
         reportFab = rootView.findViewById(R.id.report_fab);
         corruptionFab = rootView.findViewById(R.id.corruption_fab);
 
+        /**
+         * Extras para ambos popup
+         */
+        // dim background para popup detalles
+        root = (ViewGroup) getActivity().getWindow().getDecorView().getRootView();
+
+        // Tamaño de pantalla para calcular tamaño de popup nuevo reporte
+        Display display = getActivity().getWindowManager().getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+        int pxScreenWidth = size.x;
+        int pxPopupMarginsWidth = UXMethods.convertDensityPointsToPixels(120, getContext());
+
+        // Layout inflater service
+        LayoutInflater layoutInflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+        /**
+         * Inflater para obtener elementos xml del popup nuevo reporte y poder modificarlos
+        */
+        final View detailsView = layoutInflater.inflate(R.layout.popup_new_report, new LinearLayout(rootView.getContext()), false);
+        final TextView popupAddress = detailsView.findViewById(R.id.popup_address_tv);
+        final Button popupSendReport = detailsView.findViewById(R.id.popup_send_report);
+        final NumberPicker popupTypeNp = detailsView.findViewById(R.id.popup_report_type_np);
+        String [] tipos = {"Semáforo", "Accidente", "Bloqueo", "Obstrucción"};
+        popupTypeNp.setMinValue(0);
+        popupTypeNp.setMaxValue(tipos.length-1);
+        popupTypeNp.setDisplayedValues(tipos);
+
+        // Establecer tamaño de popup nuevo reporte
+        final PopupWindow popupWindow = new PopupWindow(detailsView, pxScreenWidth - pxPopupMarginsWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
+
+        /**
+         * Inflater para obtener elementos xml del popup detalles y poder modificarlos
+         */
+        final View detailsRepView = layoutInflater.inflate(R.layout.popup_report_details, new LinearLayout(rootView.getContext()), false);
+        final TextView popupDetAddress = detailsRepView.findViewById(R.id.popup_det_address_tv);
+        final ImageButton popupLikeBtn = detailsRepView.findViewById(R.id.popup_like_btn);
+
+        // Establecer tamaño de popup detalles
+        final PopupWindow popupDetWindow = new PopupWindow(detailsRepView, pxScreenWidth - pxPopupMarginsWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
+
+        // Mapa y funciones
         try {
             MapsInitializer.initialize(getActivity().getApplicationContext());
         } catch (Exception e) {
@@ -93,9 +164,11 @@ public class MapFragment extends Fragment {
                 Location location = locationManager.getLastKnownLocation(locationManager.getBestProvider(criteria, false));
                 CameraPosition cameraPosition;
                 if (location != null) {
-                    cameraPosition = new CameraPosition.Builder().target(new LatLng(location.getLatitude(), location.getLongitude())).zoom(15).build();
+                    currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    cameraPosition = new CameraPosition.Builder().target(currentLatLng).zoom(15).build();
                 } else {
-                    cameraPosition = new CameraPosition.Builder().target(new LatLng(17.0436248,-96.7119411)).zoom(13).build();
+                    currentLatLng = new LatLng(17.0436248,-96.7119411);
+                    cameraPosition = new CameraPosition.Builder().target(currentLatLng).zoom(13).build();
                 }
                 googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
 
@@ -122,7 +195,51 @@ public class MapFragment extends Fragment {
                 reportFab.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        
+                        closeFABMenu();
+                        Toast.makeText(getContext(), "Por favor haz click en la ubicación", Toast.LENGTH_SHORT).show();
+                        googleMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+                            @Override
+                            public void onMapLongClick(final LatLng latLng) {
+                                try {
+                                    googleMap.addMarker(new MarkerOptions()
+                                            .position(latLng)
+                                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+
+                                    // Mostrar direccion
+                                    Geocoder geocoder = new Geocoder(getContext(), Locale.getDefault());
+                                    List<Address> markerInfo = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
+                                    String newAddress = markerInfo.get(0).getAddressLine(0);
+
+                                    popupAddress.setText(newAddress);
+                                    popupWindow.setAnimationStyle(R.style.popup_window_animation);
+                                    popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                                    popupWindow.setFocusable(true);
+                                    popupWindow.setOutsideTouchable(true);
+                                    popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                                        @Override
+                                        public void onDismiss() {
+                                            UXMethods.clearDim(root);
+                                            googleMap.setOnMapLongClickListener(null);
+                                            getReports();
+                                        }
+                                    });
+                                    popupSendReport.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            sendReport(latLng, popupTypeNp.getValue());
+                                            popupWindow.dismiss();
+                                            googleMap.setOnMapLongClickListener(null);
+                                            getReports();
+                                        }
+                                    });
+                                    popupWindow.showAtLocation(rootView, Gravity.CENTER, 0, 0);
+                                    UXMethods.applyDim(root, 0.5f);
+
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
                     }
                 });
 
@@ -132,6 +249,34 @@ public class MapFragment extends Fragment {
 
                     }
                 });
+
+                googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+                    @Override
+                    public boolean onMarkerClick(Marker marker) {
+                        popupDetAddress.setText("probable direccion");
+                        popupDetWindow.setAnimationStyle(R.style.popup_window_animation);
+                        popupDetWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                        popupDetWindow.setFocusable(true);
+                        popupDetWindow.setOutsideTouchable(true);
+                        popupDetWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                            @Override
+                            public void onDismiss() {
+                                UXMethods.clearDim(root);
+                            }
+                        });
+                        popupLikeBtn.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                popupDetWindow.dismiss();
+                            }
+                        });
+                        popupDetWindow.showAtLocation(rootView, Gravity.CENTER, 0, 0);
+                        UXMethods.applyDim(root, 0.5f);
+                        return false;
+                    }
+                });
+
+                getReports();
             }
         });
 
@@ -177,6 +322,96 @@ public class MapFragment extends Fragment {
 
             }
         });
+    }
+
+    public void sendReport(final LatLng latLng, final int typeReport) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    JSONObject jsonReport = new JSONObject();
+                    jsonReport.put("report_type", typeReport);
+                    jsonReport.put("latitude", latLng.latitude);
+                    jsonReport.put("longitude", latLng.longitude);
+
+                    PostMethod postMethod = new PostMethod();
+                    JSONObject jsonResponse = postMethod.makeRequest(getString(R.string.create_report_url), jsonReport, getContext(), true);
+
+                    final String mensaje;
+                    if (jsonResponse != null) {
+                        mensaje = "Reporte enviado!";
+                    } else {
+                        mensaje = "Error, por favor intenta mas tarde";
+                    }
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getContext(), mensaje, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    public void getReports() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                al_reports = new ArrayList<>();
+                try {
+                    JSONObject jsonLocation = new JSONObject();
+                    jsonLocation.put("latitude", currentLatLng.latitude);
+                    jsonLocation.put("longitude", currentLatLng.longitude);
+                    GetMethod getMethod = new GetMethod();
+                    JSONArray jsonResponse = getMethod.makeRequest(getString(R.string.get_reports_url), jsonLocation, getContext(), true);
+                    if (jsonResponse != null) {
+                        for (int index = 0; index < jsonResponse.length(); index++) {
+                            final JSONObject report = jsonResponse.getJSONObject(index);
+                            Reports reports = new Reports();
+                            reports.setLatitude((double) report.getJSONObject("location").getJSONArray("coordinates").get(1));
+                            reports.setLongitude((double) report.getJSONObject("location").getJSONArray("coordinates").get(0));
+                            reports.setLikes(report.getJSONArray("likes"));
+                            reports.setStatus(report.getInt("status"));
+                            reports.setReportType(report.getInt("report_type"));
+                            reports.setAddress(report.getString("address"));
+                            reports.setUserId(report.getString("user_id"));
+                            reports.setCreatedAt(report.getString("created_at"));
+                            reports.setUpdatedAt(report.getString("updated_at"));
+
+                            al_reports.add(reports);
+                        }
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                googleMap.clear();
+                                reloadMap();
+                            }
+                        });
+                    } else {
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getContext(), "Error al recuperar marcadores", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    public void reloadMap() {
+        for (Reports report : al_reports) { // TODO porque itera menos ciclos
+            Log.i("TestApp", report.getLatitude() + " " + report.getLongitude());
+            googleMap.addMarker(new MarkerOptions()
+                    .position(new LatLng(report.getLatitude(), report.getLongitude()))
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+        }
     }
 
     @Override
